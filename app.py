@@ -1,16 +1,30 @@
-import gradio as gr
-import cv2
+import os
 import tempfile
-from ultralytics import YOLOv10
+import cv2
+from ultralytics import YOLO
+import gradio as gr
 
-
-def yolov10_inference(image, video, model_id, image_size, conf_threshold):
-    model = YOLOv10.from_pretrained(f'jameslahm/{model_id}')
+def yolov10_inference(image, video, model_path, image_size, conf_threshold):
+    """
+    执行YOLOv10模型推理。
+    Args:
+        image: 输入图像（用于图片推理）。
+        video: 输入视频（用于视频推理）。
+        model_path: 本地模型文件路径（.pt 或 .safetensors）。
+        image_size: 图像输入大小。
+        conf_threshold: 置信度阈值。
+    Returns:
+        Annotated image or annotated video path.
+    """
+    # 从本地加载模型
+    model = YOLO(model_path)
     if image:
+        # 图像推理
         results = model.predict(source=image, imgsz=image_size, conf=conf_threshold)
         annotated_image = results[0].plot()
         return annotated_image[:, :, ::-1], None
     else:
+        # 视频推理
         video_path = tempfile.mktemp(suffix=".webm")
         with open(video_path, "wb") as f:
             with open(video, "rb") as g:
@@ -55,17 +69,9 @@ def app():
                     value="Image",
                     label="Input Type",
                 )
-                model_id = gr.Dropdown(
-                    label="Model",
-                    choices=[
-                        "yolov10n",
-                        "yolov10s",
-                        "yolov10m",
-                        "yolov10b",
-                        "yolov10l",
-                        "yolov10x",
-                    ],
-                    value="yolov10m",
+                model_path = gr.Textbox(
+                    label="Model Path",
+                    value="./models/yolov10m.pt",  # 默认值为本地模型路径
                 )
                 image_size = gr.Slider(
                     label="Image Size",
@@ -101,16 +107,16 @@ def app():
             outputs=[image, video, output_image, output_video],
         )
 
-        def run_inference(image, video, model_id, image_size, conf_threshold, input_type):
+        def run_inference(image, video, model_path, image_size, conf_threshold, input_type):
             if input_type == "Image":
-                return yolov10_inference(image, None, model_id, image_size, conf_threshold)
+                return yolov10_inference(image, None, model_path, image_size, conf_threshold)
             else:
-                return yolov10_inference(None, video, model_id, image_size, conf_threshold)
+                return yolov10_inference(None, video, model_path, image_size, conf_threshold)
 
 
         yolov10_infer.click(
             fn=run_inference,
-            inputs=[image, video, model_id, image_size, conf_threshold, input_type],
+            inputs=[image, video, model_path, image_size, conf_threshold, input_type],
             outputs=[output_image, output_video],
         )
 
@@ -118,13 +124,13 @@ def app():
             examples=[
                 [
                     "ultralytics/assets/bus.jpg",
-                    "yolov10s",
+                    "./models/yolov10m.pt",
                     640,
                     0.25,
                 ],
                 [
                     "ultralytics/assets/zidane.jpg",
-                    "yolov10s",
+                    "./models/yolov10m.pt",
                     640,
                     0.25,
                 ],
@@ -132,7 +138,7 @@ def app():
             fn=yolov10_inference_for_examples,
             inputs=[
                 image,
-                model_id,
+                model_path,
                 image_size,
                 conf_threshold,
             ],
