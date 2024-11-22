@@ -44,10 +44,13 @@ class Detector(object):
         # 提取每个检测框的置信度分数。
         bboxes_xyxy = results[0].boxes.xyxy.cpu().numpy().astype('uint32')
         # 提取每个检测框的坐标，格式为 [x_min, y_min, x_max, y_max] 将将检测结果转换为 NumPy 数组。
+        list_xyxy = []
+        list_scores = []
 
         for idx in range(len(bboxes_cls)):
             box_cls = int(bboxes_cls[idx]) # 获取当前检测框的类别索引，并将其转换为整数。
-            bbox_xyxy = bboxes_xyxy[idx] 
+            bbox_xyxy = bboxes_xyxy[idx]
+            list_xyxy.append(bbox_xyxy)
             bbox_label = self.names[box_cls] # 框选到的方框中的内容标签
             box_conf = f"{bboxes_conf[idx]:.2f}" 
             print("置信度：",box_conf) 
@@ -68,23 +71,24 @@ class Detector(object):
 
                 if os.path.exists(crop_img_path):
                     print(f"File saved successfully: {crop_img_path}")
-                    scores = predict_single_image(crop_img_path)
+                    scores = predict_single_image(crop_img_path) # 得到颜值分数
+                    list_scores.append(scores)
                 else:
                     print(f"Error saving file: {crop_img_path}")
                     scores = None
                     scores = predict_single_image(crop_img_path)
                     
-                img_bgr = cv2.rectangle(img_bgr, (xmin, ymin), (xmax, ymax), get_color(box_cls + 3), 2)
+                img_bgr = cv2.rectangle(img_bgr, (xmin, ymin), (xmax, ymax), get_color(9 + 3), 2)
                 # 在原来图像上绘制一个矩形框，并为每个框设置不同的颜色。
                 
                 cv2.putText(img_bgr, 
                             f'{str(bbox_label)}/{str(scores)}', # 图像上添加文本标签 
                             (xmin, ymin - 10), # 标签卫浴图像的左上角！！
                             cv2.FONT_HERSHEY_SIMPLEX, 2, # 字体类型和字体大小！ 
-                            get_color(box_cls + 3), 2 # 文本的颜色，由 get_color 函数生成。
+                            get_color(1 + 3), 2 # 文本的颜色，由 get_color 函数生成。
                             ) # 给检测框添加表情 和 颜值得分
                 
-        return img_bgr
+        return img_bgr, list_xyxy, list_scores
 
 # Example usage
 if __name__ == '__main__':
@@ -102,55 +106,64 @@ if __name__ == '__main__':
         for img_name in image_names:
             img_path = os.path.join(opt.source, img_name)
             img_ori = cv2.imread(img_path)
-            img_vis = model.detect_image(img_ori) # 检测图片，将检测的图片框选返回。
+            img_vis, _, _ = model.detect_image(img_ori) # 检测图片，将检测的图片框选返回。
             img_vis = cv2.resize(img_vis, None, fx=1.0, fy=1.0, interpolation=cv2.INTER_NEAREST)
             cv2.imwrite(os.path.join(opt.save, img_name), img_vis) 
 
-            # if opt.vis: # 是否可视化结果
-            #     cv2.imshow(img_name, img_vis)
-            #     cv2.waitKey(0)
-            #     cv2.destroyAllWindows()
-
     else:
         print("注意：处理视频开始。")
-        capture = cv2.VideoCapture(opt.source) # 创建视频对象
-        fps = capture.get(cv2.CAP_PROP_FPS) # 获取视频的帧率
+        capture = cv2.VideoCapture(opt.source)  # 创建视频对象
+        fps = capture.get(cv2.CAP_PROP_FPS)  # 获取视频的帧率
         size = (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), 
-                int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))) # 视频中图片的宽度和高度
+                int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)))  # 视频中图片的宽度和高度
         fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
-        # 一个视频编码器（FourCC），用于在创建视频写入对象时指定视频的编解码器
         outVideo = cv2.VideoWriter(os.path.join(opt.save, os.path.basename(opt.source).split('.')[-2] + "_out.mp4"),
-                                   fourcc, # 编码器
-                                   fps, # 帧率
-                                   size # 视频尺寸
-                                   ) # 用于将视频帧写入文件
+                                  fourcc,  # 编码器
+                                  fps,  # 帧率
+                                  size  # 视频尺寸
+                                  )
+
+        frame_count = 0  # 初始化帧计数器
+        last_detected_frame = None  # 存储最后检测到的帧
+        last_detection_result = None  # 新增：存储最后检测的结果（包括边界框等）
+
         while True:
-            ret, frame = capture.read() # ret 表示布尔值是否获得帧，frame 获得的帧。
+            ret, frame = capture.read()  # 读取一帧
             if not ret:
                 break
-            start_frame_time = time.perf_counter()
-            img_vis = model.detect_image(frame)
-            # 结束计时
-            end_frame_time = time.perf_counter()  # 使用perf_counter进行时间记录
-            # 计算每帧处理的FPS
-            elapsed_time = end_frame_time - start_frame_time # 处理时间
-            if elapsed_time == 0:
-                fps_estimation = 0.0
+
+            if frame_count % 5 == 0:  # 每10帧执行一次检测
+                start_frame_time = time.perf_counter()
+                detection_frame, list_xyxy, list_scores = model.detect_image(frame)  # 执行检测
+                last_detection_result = {'frame': detection_frame, 'boxes': list_xyxy, 'scores': list_scores}  # 更新最后检测的结果
+                end_frame_time = time.perf_counter()
+                elapsed_time = end_frame_time - start_frame_time
+                fps_estimation = 1 / elapsed_time if elapsed_time > 0 else 0.0
             else:
-                fps_estimation = 1 / elapsed_time # 每秒可以处理的帧
+                # 如果不是检测帧，则使用上次检测的结果
+                if last_detection_result is not None:
+                    list_xyxy = last_detection_result['boxes']
+                    list_scores = last_detection_result['scores']
+                    for coordinates in list_xyxy:
+                        xmax, ymax, xmin, ymin = coordinates[2], coordinates[3], coordinates[0], coordinates[1]
+                        cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), get_color(9 + 3), 2)
+                        if list_scores:
+                            cv2.putText(frame, 
+                                        f'{str("face")}/{int(list_scores[0]):.2f}',  # 图像上添加文本标签 和 颜值数据
+                                        (xmin, ymin - 10),  # 标签位于图像的左上角
+                                        cv2.FONT_HERSHEY_SIMPLEX, 2,  # 字体类型和字体大小
+                                        get_color(1 + 3), 2  # 文本的颜色
+                                        )
+                    fps_estimation = 0.0
 
-            h, w, c = img_vis.shape # 获取图片的维度信息
-            cv2.putText(img_vis, 
-                        f"FPS: {fps_estimation:.2f}", # 处理速度
+            cv2.putText(frame, 
+                        f"FPS: {fps_estimation:.2f}",  # 处理速度
                         (10, 35),  # 文字位置
-                        cv2.FONT_HERSHEY_SIMPLEX, # 文字字体 
-                        1.3, # 缩放比例
-                        (0, 0, 255), # 文字颜色
-                        2 # 线条粗细
-                        )
-            outVideo.write(img_vis) # 如写新的帧率
-            # cv2.imshow('detect', img_vis) # 显示
-            # cv2.waitKey(1)
+                        cv2.FONT_HERSHEY_SIMPLEX,  # 文字字体 
+                        1.3,  # 缩放比例
+                        (0, 0, 255),  # 文字颜色
+                        2  # 线条粗细
+                    )
 
-        capture.release()
-        outVideo.release()
+            outVideo.write(frame)  # 写入输出视频
+            frame_count += 1  # 更新帧计数器

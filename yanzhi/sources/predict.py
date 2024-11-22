@@ -31,7 +31,7 @@ model.eval()
 results = [] # 初始化一个空列表 predictions，用于存储模型的预测结果。
 
 def scores(num):
-    score = 50 + (num - 1.02)/(4.75 - 1.02)*50 
+    score = 65 + (num - 1.02)/(4.75 - 1.02)*35 
     if score < 95: 
         return score.item() # 返回标量
     elif score > 110:
