@@ -5,9 +5,9 @@ import subprocess
 
 
 # 定义文件存储路径
-ORIGINAL_DIR = "image_test/original_photos"  # 原图片复制到文件的路径
-BACKGROUND_REMOVED_DIR = "image_test/after_remove_background"  # 移除背景后图片保存路径
-PROCESSED_DIR = "image_processed"  # 裁减人脸后图片保存的路径
+ORIGINAL_DIR = "yanzhi/image_test/original_photos"  # 原图片复制到文件的路径
+BACKGROUND_REMOVED_DIR = "yanzhi/image_test/after_remove_background"  # 移除背景后图片保存路径
+PROCESSED_DIR = "yanzhi/image_processed"  # 裁减人脸后图片保存的路径
 
 
 def ensure_directory_exists(directory):
@@ -42,21 +42,21 @@ def process_image(file_path):
 
         # Step 2: 去除背景
         subprocess.run(
-            ["python", "sources/change_background.py", original_file_path],
+            ["python", "yanzhi/sources/change_background.py", original_file_path],
             check=True,
         )
         background_removed_path = os.path.join(BACKGROUND_REMOVED_DIR, file_name)
 
         # Step 3: 裁切图片
         subprocess.run(
-            ["python", "sources/recut.py", background_removed_path],
+            ["python", "yanzhi/sources/recut.py", background_removed_path],
             check=True,
         )
         cropped_image_path = os.path.join(PROCESSED_DIR, file_name)
 
         # Step 4: 获取评分
         result = subprocess.run(
-            ["python", "sources/predict.py", cropped_image_path],
+            ["python", "yanzhi/sources/predict.py", cropped_image_path],
             capture_output=True,  # 捕获输出
             text=True,  # 输出为文本
             check=True,

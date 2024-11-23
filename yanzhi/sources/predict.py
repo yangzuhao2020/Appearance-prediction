@@ -1,14 +1,24 @@
 import pandas as pd
+import sys
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from yanzhi.sources.main import EfficientNetB0, FaceBeautyDataset# EfficientNetB0在 main.py 文件中定义
+import os
+# 获取当前脚本所在的目录
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# 获取项目根目录
+project_root = os.path.abspath(os.path.join(current_dir, '../..'))
+# 将项目根目录添加到 sys.path
+sys.path.append(project_root)
+
+from yanzhi.sources.main import EfficientNetB0, FaceBeautyDataset  # EfficientNetB0 在 main.py 文件中定义
+
 from PIL import Image
 
 # 参数设置
 batch_size = 4
 model_path = 'yanzhi/models/model_efficient.pth'  # 模型文件路径，根据需要修改
-image_dir = 'image_processed/'  # 图像文件夹路径
+image_dir = 'yanzhi/image_processed'  # 图像文件夹路径
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # 数据预处理
@@ -81,7 +91,9 @@ def predict_single_image(image_path, transform=transform):
     prediction_score = float(f"{prediction_score:.2f}")
     return prediction_score
 
-# single_image_path = 'image_processed/H3M.jpg'
-# single_image_path = image_path = sys.argv[1]
-# prediction = predict_single_image(single_image_path, transform)
-# print(f"预测分数: {prediction:.2f}")
+if __name__ == "__main__":
+    
+    # single_image_path = 'image_processed/H3M.jpg'
+    single_image_path = sys.argv[1]
+    prediction = predict_single_image(single_image_path, transform)
+    print(f"预测分数: {prediction:.2f}")

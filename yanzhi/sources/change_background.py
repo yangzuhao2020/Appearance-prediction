@@ -4,7 +4,7 @@ from rembg import remove
 from PIL import Image
 import os
 
-def change_bg(img_dir, output_dir, middle_dir='image_test/after_remove_background'):
+def change_bg(img_dir, output_dir, middle_dir='yanzhi/image_test/after_remove_background'):
 
     # 确保输出目录存在
     os.makedirs(output_dir, exist_ok=True)
@@ -49,7 +49,7 @@ def change_bg(img_dir, output_dir, middle_dir='image_test/after_remove_backgroun
 # change_bg("image_test/original_photos","image_test/after_remove_background")
 # change_bg("Images","image_nobackground")
 
-def change_background_single(img_dir, output_dir="image_test/after_remove_background"):
+def change_background_single(img_dir, output_dir="yanzhi/image_test/after_remove_background"):
     # 确保输出目录存在
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)

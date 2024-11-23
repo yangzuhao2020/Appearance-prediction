@@ -62,7 +62,7 @@ def cut_photos(img_dir, output_dir):
 # 调用函数
 # cut_photos('image_test/after_remove_background', 'image_processed')
 
-def cut_photos_single(image_path, output_dir = "image_processed"):
+def cut_photos_single(image_path, output_dir = "yanzhi/image_processed"):
     # 确保输出目录存在
     os.makedirs(output_dir, exist_ok=True)
 
