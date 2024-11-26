@@ -1,3 +1,4 @@
+import sys
 import cv2
 from yanzhi.sources.predict import predict_single_image
 from ultralytics import YOLOv10
@@ -6,16 +7,7 @@ import argparse
 import time
 import torch
 
-parser = argparse.ArgumentParser() # 作用在于读取命令行参数！
-# 检测参数
-parser.add_argument('--weights', default=r"models/train4/weights/best.pt", type=str, help='weights path') # 权重
-parser.add_argument('--source', default=r"dataset/videos/video1.mp4", type=str, help='img or video(.mp4)path') # 图片或者视频的地址
-parser.add_argument('--save', default=r"save", type=str, help='save img or video path') # 处理后的图片保存路径
-parser.add_argument('--vis', default=True, action='store_true', help='visualize image') # 可视化结果
-parser.add_argument('--conf_thre', type=float, default=0.5, help='conf_thre') # 置信度
-parser.add_argument('--iou_thre', type=float, default=0.5, help='iou_thre') 
-# 交并比指的是交集和并集的比值，候选框与原标记框之间的比例，表示衡量定位的精准度 
-opt = parser.parse_args() # 从命令行中解析用户输入的参数
+
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 
@@ -92,17 +84,37 @@ class Detector(object):
 
 # Example usage
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser() # 作用在于读取命令行参数！
+
+    # 检测参数
+    parser.add_argument('--weights', default=r"models/train4/weights/best.pt", type=str, help='weights path') # 权重
+    parser.add_argument('--source', default=r"dataset/videos/video1.mp4", type=str, help='img or video(.mp4)path') # 图片或者视频的地址
+    parser.add_argument('--save', default=r"save", type=str, help='save img or video path') # 处理后的图片保存路径
+    parser.add_argument('--vis', default=True, action='store_true', help='visualize image') # 可视化结果
+    parser.add_argument('--conf_thre', type=float, default=0.5, help='conf_thre') # 置信度
+    parser.add_argument('--iou_thre', type=float, default=0.5, help='iou_thre') 
+    # 交并比指的是交集和并集的比值，候选框与原标记框之间的比例，表示衡量定位的精准度 
+    opt = parser.parse_args() # 从命令行中解析用户输入的参数
+
     model = Detector(weight_path=opt.weights, 
                      conf_threshold=opt.conf_thre, 
                      iou_threshold=opt.iou_thre)
+    
     images_format = ['.png', '.jpg', '.jpeg', '.JPG', '.PNG', '.JPEG']
     video_format = ['mov', 'MOV', 'mp4', 'MP4']
 
-    if os.path.join(opt.source).split(".")[-1] not in video_format: # 判断是否属于视频格式。
+    if len(sys.argv) >= 2: # 判断是否传入数据
+        video_path = sys.argv[2] # 接收到传入的视频路径
+        print(f"得到视频路径{video_path}")
+    else:
+        video_path = "dataset/videos/video1.mp4"
+
+    if  video_path.split(".")[-1].lower() not in video_format: # 判断是否属于视频格式。
         print("注意：图片处理开始")
         image_names = [name for name in os.listdir(opt.source) for item in images_format if
                        os.path.splitext(name)[1] == item]
         # 将符合格式的图片名称存放在 image_names列表中。
+
         for img_name in image_names:
             img_path = os.path.join(opt.source, img_name)
             img_ori = cv2.imread(img_path)
@@ -112,6 +124,7 @@ if __name__ == '__main__':
 
     else:
         print("注意：处理视频开始。")
+
         capture = cv2.VideoCapture(opt.source)  # 创建视频对象
         fps = capture.get(cv2.CAP_PROP_FPS)  # 获取视频的帧率
         size = (int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), 
@@ -139,6 +152,7 @@ if __name__ == '__main__':
                 end_frame_time = time.perf_counter()
                 elapsed_time = end_frame_time - start_frame_time
                 fps_estimation = 1 / elapsed_time if elapsed_time > 0 else 0.0
+
             else:
                 # 如果不是检测帧，则使用上次检测的结果
                 if last_detection_result is not None:

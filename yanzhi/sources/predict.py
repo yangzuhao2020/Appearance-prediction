@@ -93,7 +93,7 @@ def predict_single_image(image_path, transform=transform):
 
 if __name__ == "__main__":
     
-    # single_image_path = 'image_processed/H3M.jpg'
+    # single_image_path = 'yanzhi/image_processed/H3M.jpg'
     single_image_path = sys.argv[1]
     prediction = predict_single_image(single_image_path, transform)
     print(f"预测分数: {prediction:.2f}")

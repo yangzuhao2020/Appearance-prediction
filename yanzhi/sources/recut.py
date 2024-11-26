@@ -111,5 +111,7 @@ def cut_photos_single(image_path, output_dir = "yanzhi/image_processed"):
 
 
 # image_path = "image_test/after_remove_background/AF_1.jpg"
+
+# if __name__ == "__main__":
 image_path = sys.argv[1]
 cut_photos_single(image_path)

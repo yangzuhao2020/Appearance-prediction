@@ -84,6 +84,7 @@ def change_background_single(img_dir, output_dir="yanzhi/image_test/after_remove
 
 # 示例调用
 # img_dir = "image_test/original_photos/AF_1.jpg"
+# if __name__ == "__main__":
 img_dir = sys.argv[1]
 change_background_single(img_dir)
 
