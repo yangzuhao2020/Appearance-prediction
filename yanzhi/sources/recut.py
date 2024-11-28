@@ -97,7 +97,8 @@ def cut_photos_single(image_path, output_dir = "yanzhi/image_processed"):
 
     # 构建输出文件路径
     file_name = os.path.basename(image_path) # 从路径中提取文件名
-    output_path = os.path.join(output_dir, file_name)
+    out_name = file_name.split("_")[0] + "_out2.jpg"
+    output_path = os.path.join(output_dir, out_name)
 
     # 确保输出路径有正确的扩展名
     if not output_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):

@@ -73,7 +73,8 @@ def change_background_single(img_dir, output_dir="yanzhi/image_test/after_remove
 
     # 定义最后更换背景的路径
     file_name = os.path.basename(img_dir) # 从路径中提取文件名
-    output_path = os.path.join(output_dir, file_name)
+    out_name = file_name.split(".")[0] + "_out.jpg"
+    output_path = os.path.join(output_dir, out_name)
 
     # 图片的保存
     black_bg.convert("RGB").save(output_path, "JPEG")
@@ -81,9 +82,8 @@ def change_background_single(img_dir, output_dir="yanzhi/image_test/after_remove
     print(f"图片背景消除已完成。消除后的照片保存到: {output_path}")
 
 
-
 # 示例调用
-# img_dir = "image_test/original_photos/AF_1.jpg"
+# img_dir = "yanzhi/image_test/original_photos/H3M_Eason.jpg"
 # if __name__ == "__main__":
 img_dir = sys.argv[1]
 change_background_single(img_dir)

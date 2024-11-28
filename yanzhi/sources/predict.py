@@ -41,7 +41,9 @@ model.eval()
 results = [] # 初始化一个空列表 predictions，用于存储模型的预测结果。
 
 def scores(num):
-    score = 65 + (num - 1.02)/(4.75 - 1.02)*35 
+    score = 40 + (num - 1.02)/(4.75 - 1.02)*60 
+    if score > 75:
+        score = score + 5
     if score < 95: 
         return score.item() # 返回标量
     elif score > 110:
@@ -92,8 +94,7 @@ def predict_single_image(image_path, transform=transform):
     return prediction_score
 
 if __name__ == "__main__":
-    
-    # single_image_path = 'yanzhi/image_processed/H3M.jpg'
     single_image_path = sys.argv[1]
+    print(f"处理图片的路径{single_image_path}")
     prediction = predict_single_image(single_image_path, transform)
     print(f"预测分数: {prediction:.2f}")

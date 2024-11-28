@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import pandas as pd
 import torch
@@ -8,6 +9,12 @@ import torch.utils.data
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
+from tqdm import tqdm  # 导入 tqdm
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
 
 # Squeeze-and-Excitation模块
 class SqueezeAndExcitation(nn.Module):
@@ -160,54 +167,138 @@ def train_model(model, train_loader, learning_rate, num_epochs, device):
     # 优化器学习率调整策略
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
 
+    # 用于存储每个 epoch 的损失值
+    losses = []
+    
     # 模型的训练
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
-        for inputs, labels, _ in train_loader:
-            inputs, labels = inputs.to(device), labels.to(device) 
+        with tqdm(train_loader, desc=f'Epoch {epoch + 1}/{num_epochs}', unit='batch') as pbar:  # 使用 tqdm 包装数据加载器
+            for inputs, labels, _ in pbar:
+                inputs, labels = inputs.to(device), labels.to(device) 
 
-            optimizer.zero_grad() # 清除梯度
-            output = model(inputs) # 前向传播
-            labels = labels.unsqueeze(1) # 将标签形状从 [batch_size] 调整为 [batch_size, 1]
-            loss = criterion(output, labels) # 计算损失
-            loss.backward() # 反向传播
-            optimizer.step() # 应用梯度
-            running_loss += loss.item() 
+                optimizer.zero_grad() # 清除梯度
+                output = model(inputs) # 前向传播
+                labels = labels.unsqueeze(1) # 将标签形状从 [batch_size] 调整为 [batch_size, 1]
+                loss = criterion(output, labels) # 计算损失
+                loss.backward() # 反向传播
+                optimizer.step() # 应用梯度
+                running_loss += loss.item() 
 
-    # 更新学习率
+                pbar.set_postfix(loss=loss.item())  # 在进度条后面显示当前批次的损失
+
+        # 更新学习率
         scheduler.step()
+        # 记录当前 epoch 的平均损失
+        epoch_loss = running_loss / len(train_loader)
+        losses.append(epoch_loss)
         
         if (epoch + 1) % 10 == 0:
-            print(f'Epoch {epoch + 1}, Loss: {running_loss / len(train_loader):.4f}')
+            print(f'Epoch {epoch + 1}, Loss: {epoch_loss:.4f}')
 
-    model_path = '../models/model_efficient.pth'
+    model_path = 'yanzhi/models/model_efficient.pth'
     torch.save(model.state_dict(), model_path)
     print(f'Model saved to {model_path}')
+    
+    # 绘制训练损失曲线
+    plt.figure(figsize=(10, 6))
+    plt.plot(range(1, num_epochs + 1), losses, label='Training_Loss_efficient', color='blue')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training Loss Over Epochs')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig('yanzhi/photo/training_loss.png')
 
+    
+def plot_results(y_true, y_pred, save_path="yanzhi/photo"):
+    # 绘制散点图和回归线
+    plt.figure(figsize=(10, 6))
+    
+    # 散点图
+    plt.scatter(y_true, y_pred, color='blue', alpha=0.6)
+    plt.xlabel('True Values')
+    plt.ylabel('Predictions')
+    plt.title('True vs Predicted')
+
+    # 绘制回归线
+    sns.regplot(x=y_true, y=y_pred, scatter=False, color='red')
+    
+    # 保存图片
+    if save_path:
+        plt.savefig(f"{save_path}/true_vs_predicted_efficient.png")
+
+    # 绘制误差分布
+    errors = y_pred - y_true
+    plt.figure(figsize=(10, 6))
+    plt.hist(errors, bins=30, color='orange', edgecolor='black', alpha=0.7)
+    plt.title('Prediction Errors Distribution')
+    plt.xlabel('Error')
+    plt.ylabel('Frequency')
+    
+    # 保存图像
+    if save_path:
+        plt.savefig(f'{save_path}/error_distribution_efficient.png')
+    
+    # 绘制残差图
+    plt.figure(figsize=(10, 6))
+    plt.scatter(y_pred, errors, color='green', alpha=0.6)
+    plt.axhline(y=0, color='red', linestyle='--')  # 绘制水平线 y=0
+    plt.xlabel('Predicted Values')
+    plt.ylabel('Residuals')
+    plt.title('Residual Plot')
+    plt.savefig(f'{save_path}/residual_plot_efficient.png')
+    
 def test_model(model, test_loader, device):
     model.eval()
+    y_true = []
+    y_pred = []
     test_loss = 0.0
     mse_loss = nn.MSELoss()
 
     with torch.no_grad():
         for inputs, labels, _ in test_loader:
-            inputs, labels = inputs.to(device), labels.to(device) 
+            inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             labels = labels.unsqueeze(1)
-            loss = mse_loss(outputs, labels) 
+
+            loss = mse_loss(outputs, labels)  # 计算均方误差
             test_loss += loss.item()
-        
-        avg_test_loss = test_loss / len(test_loader)
-        print(f'Test Loss: {avg_test_loss}')
+
+            # 存储预测值和真实值
+            y_true.extend(labels.cpu().numpy())
+            y_pred.extend(outputs.cpu().numpy())
+
+    avg_test_loss = test_loss / len(test_loader)
+    print(f'Test Loss: {avg_test_loss}')
+
+    # 计算 MAE, RMSE 和 PC
+    y_true = np.array(y_true).flatten()  # 真实标签
+    y_pred = np.array(y_pred).flatten()  # 预测结果
+
+    # MAE
+    mae = mean_absolute_error(y_true, y_pred)
+    print(f'Mean Absolute Error (MAE): {mae:.4f}')
+
+    # RMSE
+    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
+    print(f'Root Mean Squared Error (RMSE): {rmse:.4f}')
+
+    # Pearson Correlation (PC)
+    correlation = np.corrcoef(y_true, y_pred)[0, 1]
+    print(f'Pearson Correlation (PC): {correlation:.4f}')
+
+    # 绘制结果
+    plot_results(y_true, y_pred)
 
 def main():
     # 超参数的设置
     batch_size = 64
     learning_rate = 0.01
     num_epochs = 200 
-    labels_df = pd.read_csv('name_to_label.csv') 
-    image_dir = '../image_nobackground/' 
+    labels_df = pd.read_csv('yanzhi/name_to_label.csv') 
+    image_dir = 'yanzhi/image_nobackground/' 
 
     # 数据预处理
     transform = transforms.Compose([
